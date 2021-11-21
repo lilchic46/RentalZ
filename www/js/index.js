@@ -1,12 +1,9 @@
 var ERROR = 'ERROR';
 
-// Create or Open Database.
 var db = window.openDatabase('CW1', '1.0', 'CW1', 20000);
 
-// To detect whether users use mobile phones horizontally or vertically.
 $(window).on('orientationchange', onOrientationChange);
 
-// Display messages in the console.
 function log(message, type = 'INFO') {
     console.log(`${new Date()} [${type}] ${message}`);
 }
@@ -20,7 +17,6 @@ function onOrientationChange(e) {
     }
 }
 
-// To detect whether users open applications on mobile phones or browsers.
 if (navigator.userAgent.match(/(iPhone|iPod|iPad|Android|BlackBerry)/)) {
     $(document).on('deviceready', onDeviceReady);
 }
@@ -28,17 +24,14 @@ else {
     $(document).on('ready', onDeviceReady);
 }
 
-// Display errors when executing SQL queries.
 function transactionError(tx, error) {
     log(`SQL Error ${error.code}. Message: ${error.message}.`, ERROR);
 }
 
-// Run this function after starting the application.
 function onDeviceReady() {
     log(`Device is ready.`);
 
     db.transaction(function (tx) {
-        // Create table Account.
         var query = `CREATE TABLE IF NOT EXISTS Property (Id INTEGER PRIMARY KEY AUTOINCREMENT,
                                                          PropertyName TEXT NOT NULL UNIQUE,
                                                          PropertyAddress TEXT,
@@ -69,19 +62,71 @@ function onDeviceReady() {
     prepareDatabase(db);
 }
 
+//Import data city, district and ward in create form
 $(document).on('pagebeforeshow', '#page-create', function(){
     importCity();
     importDistrict();
     importWard(); 
 });
-
 $(document).on('change', '#page-create #frm-register #city', function(){
     importDistrict();
     importWard();
 });
-
 $(document).on('change', '#page-create #frm-register #district', function(){
     importWard();
+});
+
+// Register a new property.
+$(document).on('submit', '#page-create #frm-register', confirmProperty);
+$(document).on('submit', '#page-create #frm-confirm', registerProperty);
+$(document).on('vclick', '#page-create #frm-confirm', function () {
+    log('Close popup confirmation.')
+    $('#page-create #frm-confirm').popup('close');
+});
+
+// Display Property List.
+$(document).on('pagebeforeshow', '#page-list', showList);
+
+// Save Property Id.
+$(document).on('vclick', '#list-property li a', function (e) {
+    e.preventDefault();
+
+    var id = $(this).data('details').Id;
+    localStorage.setItem('currentPropertyId', id);
+
+    $.mobile.navigate('#page-detail', { transition: 'none' });
+});
+
+// Show Property Details.
+$(document).on('pagebeforeshow', '#page-detail', showDetail);
+
+// Delete Property.
+$(document).on('submit', '#page-detail #frm-delete', deleteProperty);
+$(document).on('keyup', '#page-detail #frm-delete #txt-delete', confirmDeleteProperty);
+
+//Update Property.
+$(document).on('vclick', '#page-detail #btn-update', showUpdate);
+$(document).on('submit', '#page-detail #frm-update', updateProperty);
+$(document).on('vclick', '#page-detail #frm-update #btn-cancel', function () {
+    $('#page-detail #frm-update').popup('close');
+});
+$(document).on('change', '#page-detail #frm-update #city', function () {
+    UpdateDistrict($('#page-detail #frm-update #district'), this.value);
+    UpdateWard($('#page-detail #frm-update #ward'), -1);
+});
+$(document).on('change', '#page-detail #frm-update #district', function () {
+    UpdateWard($('#page-detail #frm-update #ward'), this.value);
+});
+
+// Add Comment.
+$(document).on('submit', '#page-detail #frm-note', addNote);
+
+//Search
+$(document).on('submit', '#page-search #frm-search', Search);
+$(document).on('vclick', '#page-search #frm-search #btn-clear', function () {
+    $('#frm-search').trigger('reset');
+    $('#page-search #error').empty();
+    $('#page-search #list-property').empty();
 });
 
 function importCity(selectedId = -1){
@@ -146,14 +191,6 @@ function importWard(){
         }
     });
 }
-
-// Submit a form to register a new property.
-$(document).on('submit', '#page-create #frm-register', confirmProperty);
-$(document).on('submit', '#page-create #frm-confirm', registerProperty);
-$(document).on('vclick', '#page-create #frm-confirm', function () {
-    log('Close popup confirmation.')
-    $('#page-create #frm-confirm').popup('close');
-});
 
 function confirmProperty(e) {
     e.preventDefault();
@@ -253,9 +290,6 @@ function registerProperty(e) {
     });
 }
 
-// Display Property List.
-$(document).on('pagebeforeshow', '#page-list', showList);
-
 function showList() {
     db.transaction(function (tx) {
         var query = 'SELECT Id, PropertyName, PropertyAddress, PropertyType FROM Property';
@@ -283,19 +317,6 @@ function showList() {
         }
     });
 }
-
-// Save Property Id.
-$(document).on('vclick', '#list-property li a', function (e) {
-    e.preventDefault();
-
-    var id = $(this).data('details').Id;
-    localStorage.setItem('currentPropertyId', id);
-
-    $.mobile.navigate('#page-detail', { transition: 'none' });
-});
-
-// Show Property Details.
-$(document).on('pagebeforeshow', '#page-detail', showDetail);
 
 function showDetail() {
     var id = localStorage.getItem('currentPropertyId');
@@ -367,10 +388,6 @@ function showDetail() {
     });
 }
 
-// Delete Property.
-$(document).on('submit', '#page-detail #frm-delete', deleteProperty);
-$(document).on('keyup', '#page-detail #frm-delete #txt-delete', confirmDeleteProperty);
-
 function confirmDeleteProperty() {
     var text = $('#page-detail #frm-delete #txt-delete').val();
 
@@ -400,22 +417,6 @@ function deleteProperty(e) {
         }
     });
 }
-
-//Update prop
-$(document).on('vclick', '#page-detail #btn-update', showUpdate);
-$(document).on('submit', '#page-detail #frm-update', updateProperty);
-$(document).on('vclick', '#page-detail #frm-update #btn-cancel', function () {
-    $('#page-detail #frm-update').popup('close');
-});
-
-$(document).on('change', '#page-detail #frm-update #city', function () {
-    UpdateDistrict($('#page-detail #frm-update #district'), this.value);
-    UpdateWard($('#page-detail #frm-update #ward'), -1);
-});
-
-$(document).on('change', '#page-detail #frm-update #district', function () {
-    UpdateWard($('#page-detail #frm-update #ward'), this.value);
-});
 
 function UpdateCity(selectedId = -1){
     db.transaction(function (tx) {
@@ -585,9 +586,6 @@ function updateProperty(e) {
     });    
 }
 
-// Add Comment.
-$(document).on('submit', '#page-detail #frm-note', addNote);
-
 function addNote(e) {
     e.preventDefault();
 
@@ -636,14 +634,6 @@ function showNote() {
         }
     });
 }
-
-//Search
-$(document).on('submit', '#page-search #frm-search', Search);
-$(document).on('vclick', '#page-search #frm-search #btn-clear', function () {
-    $('#frm-search').trigger('reset');
-    $('#page-search #error').empty();
-    $('#page-search #list-property').empty();
-});
 
 function Search(e){
     e.preventDefault();
